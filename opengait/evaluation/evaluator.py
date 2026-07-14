@@ -69,6 +69,71 @@ def cross_view_gallery_evaluation(feature, label, seq_type, view, dataset, metri
 
 
 def single_view_gallery_evaluation(feature, label, seq_type, view, dataset, metric):
+    if dataset == 'SUSTech1K':
+        probe_seq_dict = {
+            'Normal': ['01-nm'],
+            'Bag': ['bg'],
+            'Clothing': ['cl'],
+            'Carrying': ['cr'],
+            'Umberalla': ['ub'],
+            'Uniform': ['uf'],
+            'Occlusion': ['oc'],
+            'Night': ['nt'],
+            'Overall': ['01', '02', '03', '04'],
+        }
+        gallery_seq = ['00-nm']
+        msg_mgr = get_msg_mgr()
+        acc = {}
+        view_list = sorted(np.unique(view))
+        view_num = len(view_list)
+        num_rank = 5
+
+        for type_, probe_seq in probe_seq_dict.items():
+            acc[type_] = np.zeros((view_num, view_num, num_rank)) - 1.
+            for v1, probe_view in enumerate(view_list):
+                pseq_mask = np.any(np.asarray([
+                    np.char.find(seq_type, probe) >= 0 for probe in probe_seq
+                ]), axis=0) & np.isin(view, probe_view)
+                probe_x = feature[pseq_mask, :]
+                probe_y = label[pseq_mask]
+
+                for v2, gallery_view in enumerate(view_list):
+                    gseq_mask = np.any(np.asarray([
+                        np.char.find(seq_type, gallery) >= 0
+                        for gallery in gallery_seq
+                    ]), axis=0) & np.isin(view, [gallery_view])
+                    gallery_y = label[gseq_mask]
+                    gallery_x = feature[gseq_mask, :]
+                    dist = cuda_dist(probe_x, gallery_x, metric)
+                    idx = dist.topk(num_rank, largest=False)[1].cpu().numpy()
+                    acc[type_][v1, v2, :] = np.round(
+                        np.sum(
+                            np.cumsum(
+                                np.reshape(probe_y, [-1, 1])
+                                == gallery_y[idx[:, :num_rank]],
+                                1,
+                            )
+                            > 0,
+                            0,
+                        )
+                        * 100
+                        / dist.shape[0],
+                        2,
+                    )
+
+        result_dict = {}
+        msg_mgr.log_info('===Rank-1 (Exclude identical-view cases)===')
+        for rank in range(num_rank):
+            out_str = ""
+            for type_ in probe_seq_dict:
+                sub_acc = de_diag(acc[type_][:, :, rank], each_angle=True)
+                if rank == 0:
+                    msg_mgr.log_info(f'{type_}@R{rank + 1}: {sub_acc}')
+                    result_dict[f'scalar/test_accuracy/{type_}@R{rank + 1}'] = np.mean(sub_acc)
+                out_str += f'{type_}@R{rank + 1}: {np.mean(sub_acc):.2f}%\t'
+            msg_mgr.log_info(out_str)
+        return result_dict
+
     probe_seq_dict = {'CASIA-B': {'NM': ['nm-05', 'nm-06'], 'BG': ['bg-01', 'bg-02'], 'CL': ['cl-01', 'cl-02']},
                       'OUMVLP': {'NM': ['00']},
                       'CASIA-E': {'NM': ['H-scene2-nm-1', 'H-scene2-nm-2', 'L-scene2-nm-1', 'L-scene2-nm-2', 'H-scene3-nm-1', 'H-scene3-nm-2', 'L-scene3-nm-1', 'L-scene3-nm-2', 'H-scene3_s-nm-1', 'H-scene3_s-nm-2', 'L-scene3_s-nm-1', 'L-scene3_s-nm-2',],
@@ -122,7 +187,7 @@ def evaluate_indoor_dataset(data, dataset, metric='euc', cross_view_gallery=Fals
     label = np.array(label)
     view = np.array(view)
 
-    if dataset not in ('CASIA-B', 'OUMVLP', 'CASIA-E'):
+    if dataset not in ('CASIA-B', 'OUMVLP', 'CASIA-E', 'SUSTech1K'):
         raise KeyError("DataSet %s hasn't been supported !" % dataset)
     if cross_view_gallery:
         return cross_view_gallery_evaluation(
@@ -283,5 +348,4 @@ def evaluate_Gait3D(data, dataset, metric='euc'):
     # print_csv_format(dataset_name, results)
     msg_mgr.log_info(results)
     return results
-
 
