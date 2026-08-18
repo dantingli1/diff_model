@@ -1,0 +1,134 @@
+data_cfg:
+  dataset_name: CASIA-B
+  dataset_root: /mnt/home/xiaoziqiang/OpenGait/datasets/CASIA-B/CASIA-B-START
+  dataset_partition: /mnt/home/xiaoziqiang/OpenGait/datasets/CASIA-B/CASIA-B.json
+  num_workers: 1
+  remove_no_gallery: false
+  test_dataset_name: CASIA-B
+  cache: false
+  data_in_use: [false, true, true, true, false, false, true]
+  eval_data_in_use: [false, true, true, false, false, false, false]
+
+evaluator_cfg:
+  enable_float16: true
+  restore_ckpt_strict: true
+  restore_hint: 0
+  save_name: E2EGLGait_CASIA-B
+  eval_func: evaluate_indoor_dataset
+  sampler:
+    batch_shuffle: false
+    batch_size: 1
+    sample_type: all_ordered
+    type: InferenceSampler
+    frames_all_limit: 720
+  metric: euc
+  transform:
+    - type: BaseSilTransform
+      divsor: 1.0
+    - type: BaseRgbTransform
+
+loss_cfg:
+  - loss_term_weight: 1.0
+    margin: 0.2
+    start: 30000
+    type: CTL
+    log_prefix: ctl
+  - loss_term_weight: 1.0
+    scale: 16
+    type: CrossEntropyLoss
+    log_prefix: softmax
+    log_accuracy: true
+  - loss_term_weight: 10.0
+    type: WeightedSmoothL1Loss
+    log_prefix: p_soft
+    beta: 0.1
+  - loss_term_weight: 10.0
+    type: WeightedSmoothL1Loss
+    log_prefix: l1_t_structure
+    beta: 0.1
+
+model_cfg:
+  model: E2EGLGait
+  freeze_rec_iters: 10000
+  rec_grad_start_iters: 20000
+  rec_grad_flow: t_only
+  rec_grad_beta: 0.9
+  rec_grad_inner_range: [0.0, 0.7]
+  rec_grad_outer_range: [0.3, 0.7]
+  p_db_range: [0.2, 0.7]
+  db_k: 30
+  db_k_start_iters: 20000
+  db_k_step_iters: 1000
+  db_k_step: 1
+  db_k_max: 50
+  rec_target_h: 64
+  rec_target_w: 44
+  align_row_min_pixels: 2
+  align_min_valid_rows_ratio: 0.30
+  align_min_bbox_ratio: 0.60
+  align_safe_top_ratio: 0.10
+  align_safe_bottom_ratio: 0.95
+  p_blur_ks: 7
+  p_blur_sigma: 2.0
+  t_default: 0.5
+  t_inner_base: 0.45
+  t_inner_floor: 0.30
+  t_inner_sk_tau: 0.70
+  t_outer_floor: 0.30
+  t_outer_bg_tau: 0.15
+  t_outer_sk_tau: 0.70
+  seg_in_channels: 3
+  GLGait:
+    backbone_cfg:
+      type: GLGait
+      block: BasicBlock
+      channels: [64, 128, 256, 512]
+      layers: [1, 4, 4, 1]
+      strides: [1, 2, 2, 1]
+      maxpool: false
+    SeparateFCs:
+      in_channels: 512
+      out_channels: 256
+      parts_num: 16
+    SeparateBNNecks:
+      class_num: 74
+      in_channels: 256
+      parts_num: 16
+    bin_num: [16]
+
+optimizer_cfg:
+  lr: 0.1
+  momentum: 0.9
+  solver: SGD
+  weight_decay: 0.0005
+
+scheduler_cfg:
+  gamma: 0.1
+  milestones: [10000, 30000, 50000, 70000]
+  scheduler: MultiStepLR
+
+trainer_cfg:
+  enable_float16: true
+  fix_BN: false
+  with_test: true
+  log_iter: 500
+  restore_ckpt_strict: true
+  restore_hint: 0
+  save_iter: 20000
+  save_name: E2EGLGait_CASIA-B
+  sync_BN: false
+  total_iter: 180000
+  find_unused_parameters: false
+  sampler:
+    batch_shuffle: true
+    batch_size: [4, 4]
+    frames_num_fixed: 30
+    frames_skip_num: 0
+    sample_type: fixed_ordered
+    type: TripletSampler
+  transform:
+    - type: BaseSilTransform
+      divsor: 1.0
+    - type: BaseRgbTransform
+    - type: BaseSilTransform
+    - type: BaseSilTransform

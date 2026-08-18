@@ -1,0 +1,102 @@
+data_cfg:
+  dataset_name: CASIA-B
+  dataset_root: "/mnt/home/lidanting/gait/dataall/casia-b-pkl/"
+  dataset_partition: "/mnt/home/lidanting/GLgait/GLGait/datasets/CASIA-B/CASIA-B.json"
+  num_workers: 8
+  remove_no_gallery: false
+  test_dataset_name: CASIA-B
+  cache: false
+  data_in_use: [true, false, false, false, false, false, false]
+
+evaluator_cfg:
+  enable_float16: true
+  restore_ckpt_strict: true
+  restore_hint: 0
+  save_name: GL_prediff_nodiffAttn_ks12_casiab
+  eval_func: evaluate_indoor_dataset
+  sampler:
+    batch_shuffle: false
+    batch_size: 1
+    sample_type: fixed_ordered
+    frames_num_fixed: 30
+    frames_skip_num: 0
+    frames_all_limit: 720
+    type: InferenceSampler
+  metric: euc
+  transform:
+    - type: BaseSilTransform
+
+loss_cfg:
+  - loss_term_weight: 1.0
+    margin: 0.2
+    start: 30000
+    type: CTL
+    log_prefix: ctl
+  - loss_term_weight: 1.0
+    scale: 16
+    type: CrossEntropyLoss
+    log_prefix: softmax
+    log_accuracy: true
+
+model_cfg:
+  model: GL_prediff_Model
+  backbone_cfg:
+    type: GL_prediff                     # 仅用于日志，可被 model.build_network 忽略
+
+    # ---- 主干基础结构 ----
+    channels: [64, 128, 256, 512]
+    layers: [1, 4, 4, 1]
+    strides: [1, 2, 2, 1]
+    maxpool: false
+    in_channel: 1
+
+    # ---- ★ 三个可配置开关 + 注意力超参 ----
+    use_temporal_diff: true              # 是否启用多路时序差分 (TemporalDifference)
+    use_diff_attention: false             # 是否启用差分注意力 (DifferentialAttention) true-open false close
+    diff_ks: [1,2]                   # 差分间隔；可写 [1] / [2] / [3] / [1,2] / [1,2,3]
+    diff_attn_heads: 4                   # 差分注意力头数
+    lambda_init: 0.5                     # 差分注意力 λ 初值
+    diff_fuse: residual    # 可选 'residual'(默认) / 'concat'
+
+  SeparateFCs:
+    in_channels: 512
+    out_channels: 256
+    parts_num: 16
+  SeparateBNNecks:
+    class_num: 74
+    in_channels: 256
+    parts_num: 16
+  bin_num: [16]
+ 
+optimizer_cfg:
+  lr: 0.1
+  momentum: 0.9
+  solver: SGD
+  weight_decay: 0.0005
+
+scheduler_cfg:
+  gamma: 0.1
+  milestones: [20000, 40000, 50000, 70000]
+  scheduler: MultiStepLR
+
+trainer_cfg:
+  enable_float16: true
+  fix_BN: false
+  with_test: true
+  log_iter: 100
+  restore_ckpt_strict: true
+  restore_hint: 0
+  save_iter: 20000
+  save_name: GL_prediff_nodiffAttn_ks12_casiab
+  sync_BN: false  #single gpu false
+  total_iter: 80000
+  find_unused_parameters: false
+  sampler:
+    batch_shuffle: true
+    batch_size: [12, 4]
+    frames_num_fixed: 30
+    frames_skip_num: 0
+    sample_type: fixed_ordered
+    type: TripletSampler
+  transform:
+    - type: BaseSilTransform

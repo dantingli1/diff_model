@@ -1,0 +1,91 @@
+data_cfg:
+  dataset_name: CASIA-B
+  dataset_root: /mnt/home/lidanting/gait/dataall/casia-b-pkl
+  dataset_partition: /mnt/home/lidanting/projects/OpenGait/datasets/CASIA-B/CASIA-B.json
+  num_workers: 0
+  remove_no_gallery: false
+  test_dataset_name: CASIA-B
+  cache: false
+  data_in_use: [true, false, false, false, false, false, false]
+
+evaluator_cfg:
+  enable_float16: true
+  restore_ckpt_strict: true
+  restore_hint: 0
+  save_name: GLGait_CASIA-B
+  eval_func: evaluate_indoor_dataset
+  sampler:
+    batch_shuffle: false
+    batch_size: 4
+    sample_type: fixed_ordered
+    frames_num_fixed: 30
+    frames_skip_num: 0
+    frames_all_limit: 720
+    type: InferenceSampler
+  metric: euc
+  transform:
+    - type: BaseSilTransform
+
+loss_cfg:
+  - loss_term_weight: 1.0
+    margin: 0.2
+    start: 30000
+    type: CTL
+    log_prefix: ctl
+  - loss_term_weight: 1.0
+    scale: 16
+    type: CrossEntropyLoss
+    log_prefix: softmax
+    log_accuracy: true
+
+model_cfg:
+  model: Baseline_trans
+  backbone_cfg:
+    type: GLGait
+    block: BasicBlock
+    channels: [64, 128, 256, 512]
+    layers: [1, 4, 4, 1]
+    strides: [1, 2, 2, 1]
+    maxpool: false
+  SeparateFCs:
+    in_channels: 512
+    out_channels: 256
+    parts_num: 16
+  SeparateBNNecks:
+    class_num: 74
+    in_channels: 256
+    parts_num: 16
+  bin_num: [16]
+
+optimizer_cfg:
+  lr: 0.1
+  momentum: 0.9
+  solver: SGD
+  weight_decay: 0.0005
+
+scheduler_cfg:
+  gamma: 0.1
+  milestones: [20000, 40000, 50000, 70000]
+  scheduler: MultiStepLR
+
+trainer_cfg:
+  enable_float16: true
+  fix_BN: false
+  with_test: true
+  log_iter: 500
+  restore_ckpt_strict: true
+  restore_hint: 20000
+  save_iter: 20000
+  save_name: GLGait_CASIA-B
+  sync_BN: false
+  total_iter: 80000
+  find_unused_parameters: false
+  sampler:
+    batch_shuffle: true
+    batch_size: [4, 4]
+    frames_num_fixed: 30
+    frames_skip_num: 0
+    sample_type: fixed_ordered
+    type: TripletSampler
+  transform:
+    - type: BaseSilTransform

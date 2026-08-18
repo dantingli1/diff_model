@@ -217,6 +217,46 @@ class BaseModel(MetaModel, nn.Module):
             num_workers=data_cfg['num_workers'])
         return loader
 
+    # def get_loader(self, data_cfg, train=True):
+    # sampler_cfg = self.cfgs['trainer_cfg']['sampler'] if train else self.cfgs['evaluator_cfg']['sampler']
+    # dataset = DataSet(data_cfg, train)
+
+    # if train:
+    #     # 训练维持原版 TripletSampler 分布式采样逻辑不变
+    #     Sampler = get_attr_from([Samplers], sampler_cfg['type'])
+    #     vaild_args = get_valid_args(Sampler, sampler_cfg, free_keys=[
+    #         'sample_type', 'type'])
+    #     sampler = Sampler(dataset, **vaild_args)
+
+    #     loader = tordata.DataLoader(
+    #         dataset=dataset,
+    #         batch_sampler=sampler,
+    #         collate_fn=CollateFn(dataset.label_set, sampler_cfg),
+    #         num_workers=data_cfg['num_workers'])
+    # else:
+    #     # ======测试集核心修复======
+    #     test_bs = sampler_cfg["batch_size"]
+    #     # 多卡场景：仅 rank0 构建 collate_fn，其余rank共用，保证label_set完全一致
+    #     import torch.distributed as dist
+    #     if dist.is_initialized():
+    #         rank = dist.get_rank()
+    #         if rank == 0:
+    #             collate = CollateFn(dataset.label_set, sampler_cfg)
+    #         else:
+    #             collate = None
+    #     else:
+    #         collate = CollateFn(dataset.label_set, sampler_cfg)
+
+    #     loader = tordata.DataLoader(
+    #         dataset=dataset,
+    #         batch_size=test_bs,
+    #         shuffle=False,
+    #         collate_fn=collate,
+    #         num_workers=data_cfg['num_workers'],
+    #         drop_last=False
+    #     )
+    # return loader
+
     def get_optimizer(self, optimizer_cfg):
         self.msg_mgr.log_info(optimizer_cfg)
         optimizer = get_attr_from([optim], optimizer_cfg['solver'])

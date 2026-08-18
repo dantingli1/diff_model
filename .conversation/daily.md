@@ -1,0 +1,7 @@
+- 2026-07-13 CST：新增GLGait SUSTech1K配置，使用第7路64×64 Camera-Sils_aligned并裁至64×44；数据使用OpenGait绝对路径，保留250类及120k策略；项目已上传解压out124，并修复fixed_ordered下seqL=None前向，新增回归测试。
+- 2026-07-14 10:17-11:03 CST：本机与out124同步补齐SUSTech1K官方评估：00-nm为gallery，复合协变量按子串统计，输出Rank-1～5；新增协议及CASIA-B回归，本机3项、远端4项测试及编译通过；模型、checkpoint、YAML未改。
+- 2026-07-14 17:27 CST：新增SUSTech1K E2EGLGait：RGB双头分割、P/T监督、可微DB与64×44对齐；训练用04/05/07/17，测试用04/05，单卡配置；out124全量18项及完整GPU训练/测试前向通过。
+- 2026-07-15 09:13 CST：修复E2E训练内置测试沿用4路trainer transform的问题；eval时临时切换2路evaluator transform并用finally恢复；本地16项、out124全量20项通过，YAML未改。
+- 2026-07-15 09:30 CST：修复CTL普通count与真实轮次偏离：Baseline_trans传递model.iteration，CTL按当前轮次启用中心正样本，断点续训不再重计；本地22项、out124全量23项通过，DyGait/YAML未改。
+- 2026-07-16 11:30 CST：新增E2EGLGait CASIA-B-Star配置与测试；兼容标量W/H，采用74类、16 parts、fixed_ordered从0训练；26项回归通过。
+- 2026-07-16 CST：新增原生GLGait CASIA-B-Star单卡配置；直接读取64×44 aligned-sil，采用CTL+Softmax、74类、80k与fixed_ordered从0训练；本地30项回归及配置检查通过。

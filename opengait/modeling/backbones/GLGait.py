@@ -426,15 +426,15 @@ class GLGait(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x, n=None, s=30):
-        x = self.conv1(x)
+        x = self.conv1(x)       # (n·s, 1, 64, 44) → (n·s, 32, 64, 44)，简单2d空间卷积
         x = self.bn1(x)
         x = self.relu(x)
         if self.maxpool_flag:
             x = self.maxpool(x)
 
-        bs = x.shape[0] // s
-        x = x.view(bs, x.shape[0] // bs, x.shape[1], x.shape[2], x.shape[3])
-        x = x.permute(0, 2, 1, 3, 4)
+        bs = x.shape[0] // s    ## bs = n (真实batch数)帧数，n*s = x.shape[0] (输入的batch数)
+        x = x.view(bs, x.shape[0] // bs, x.shape[1], x.shape[2], x.shape[3])   # (n, s, 32, 64, 44) → (n, s, c, h, w)
+        x = x.permute(0, 2, 1, 3, 4)   # (n, s, c, h, w) → (n, c, s, h, w)  变换为3D卷积输入格式
         x = self.layer1(x)
         x = self.layer2(x)
 

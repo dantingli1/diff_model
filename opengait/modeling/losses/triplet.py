@@ -78,13 +78,13 @@ class CTL(BaseLoss):
     def __init__(self, margin, loss_term_weight=1.0, start=30000,):
         super(CTL, self).__init__(loss_term_weight)
         self.margin = margin
-        self.count = 0
         self.start = start
         self.eps = 1e-3
 
     @gather_and_scale_wrapper
-    def forward(self, embeddings, labels, bnn):
+    def forward(self, embeddings, labels, bnn, iteration):
         # embeddings: [n, c, p], label: [n], bnn: [p, n, c]
+        current_iteration = int(iteration.reshape(-1)[0].item())
         self.centers = bnn.permute(2, 0, 1).contiguous().float()
         embeddings = embeddings.permute(2, 0, 1).contiguous().float()  # [n, c, p] -> [p, n, c]
 
@@ -96,15 +96,14 @@ class CTL(BaseLoss):
         dist_d = distmat.mean()
 
         # embeddings ?
-        if self.count >= self.start:
+        if current_iteration >= self.start:
+            if current_iteration == self.start:
+                print("---------------------------starting!---------------------------")
             dist = self.ComputeDistance(embeddings, ref_embed)
             mean_dist = dist.mean((1, 2))
             ap_dist, an_dist = self.Convert2Triplets(labels, ref_label, dist, distmat)  # 8, 124
 
         else:
-            self.count += 1
-            if self.count == self.start:
-                print("---------------------------starting!---------------------------")
             dist = self.ComputeDistance(embeddings, ref_embed)  # [p, n1, n2]
             mean_dist = dist.mean((1, 2))  # [p]
             ap_dist, an_dist = self.Convert2Triplets(labels, ref_label, dist)

@@ -65,6 +65,10 @@ class BaseRgbTransform():
         self.std = np.array(std).reshape((1, 3, 1, 1))
 
     def __call__(self, x):
+        if x.ndim == 4 and x.shape[-1] == 3:
+            x = x.transpose(0, 3, 1, 2)
+        elif x.ndim == 3 and x.shape[-1] == 3:
+            x = x.transpose(2, 0, 1)
         return (x - self.mean) / self.std
 
 

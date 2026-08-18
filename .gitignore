@@ -1,0 +1,10 @@
+data/
+*.pth
+*.pt
+*.pkl
+__pycache__/
+*.pyc
+output/
+logs/
+*.log
+.DS_Store

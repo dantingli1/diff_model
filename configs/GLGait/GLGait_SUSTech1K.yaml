@@ -1,0 +1,118 @@
+data_cfg:
+  dataset_name: SUSTech1K-E2E
+  dataset_root: /mnt/home/xiaoziqiang/OpenGait/datasets/SUSTech1K/SUSTech1K-E2E
+  data_in_use: [false, false, false, false, false, false, true, false, false, false, false, false, false, false, false, false, false, false]
+  dataset_partition: /mnt/home/xiaoziqiang/OpenGait/datasets/SUSTech1K/SUSTech1K.json
+  num_workers: 1
+  remove_no_gallery: false
+  test_dataset_name: SUSTech1K
+
+evaluator_cfg:
+  enable_float16: true
+  restore_ckpt_strict: true
+  restore_hint: 120000
+  save_name: GLGait_SUSTech1K
+  eval_func: evaluate_indoor_dataset
+  sampler:
+    batch_shuffle: false
+    batch_size: 1
+    sample_type: all_ordered
+    type: InferenceSampler
+    frames_all_limit: 512
+  transform:
+    - type: BaseSilCuttingTransform
+
+loss_cfg:
+  - loss_term_weight: 1.0
+    margin: 0.2
+    type: TripletLoss
+    log_prefix: triplet
+  - loss_term_weight: 1.0
+    margin: 0.2
+    start: 30000
+    type: CTL
+    log_prefix: ctl
+  - loss_term_weight: 1.0
+    scale: 16
+    type: CrossEntropyLoss
+    log_prefix: softmax
+    log_accuracy: true
+
+model_cfg:
+  model: Baseline_trans
+  backbone_cfg:
+    type: GLGait
+    block: BasicBlock
+    channels:
+      - 64
+      - 128
+      - 256
+      - 512
+    layers:
+      - 1
+      - 4
+      - 4
+      - 1
+    strides:
+      - 1
+      - 2
+      - 2
+      - 1
+    maxpool: false
+  SeparateFCs:
+    in_channels: 512
+    out_channels: 256
+    parts_num: 16
+  SeparateBNNecks:
+    class_num: 250
+    in_channels: 256
+    parts_num: 16
+  bin_num:
+    - 16
+
+optimizer_cfg:
+  lr: 0.1
+  momentum: 0.9
+  solver: SGD
+  weight_decay: 0.0005
+
+scheduler_cfg:
+  gamma: 0.1
+  milestones:
+    - 40000
+    - 80000
+    - 100000
+  scheduler: MultiStepLR
+
+trainer_cfg:
+  enable_float16: true
+  fix_BN: false
+  with_test: false
+  log_iter: 100
+  restore_ckpt_strict: true
+  restore_hint: 0
+  save_iter: 10000
+  save_name: GLGait_SUSTech1K
+  sync_BN: true
+  total_iter: 120000
+  sampler:
+    batch_shuffle: true
+    batch_size:
+      - 32
+      - 4
+    frames_num_fixed: 30
+    frames_num_max: 40
+    frames_num_min: 20
+    frames_skip_num: 0
+    sample_type: fixed_ordered
+    type: TripletSampler
+  transform:
+    - type: Compose
+      trf_cfg:
+        - type: RandomPerspective
+          prob: 0.2
+        - type: BaseSilCuttingTransform
+        - type: RandomHorizontalFlip
+          prob: 0.2
+        - type: RandomRotate
+          prob: 0.2
