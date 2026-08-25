@@ -12,7 +12,7 @@ evaluator_cfg:
   enable_float16: true
   restore_ckpt_strict: true
   restore_hint: 0
-  save_name: GLGait_casia_diff_fusion
+  save_name: GL_prediff_CASIA-B_tdv
   eval_func: evaluate_indoor_dataset
   sampler:
     batch_shuffle: false
@@ -39,14 +39,24 @@ loss_cfg:
     log_accuracy: true
 
 model_cfg:
-  model: GL_diff_fusion
+  model: GL_prediff_Model
   backbone_cfg:
-    type: GLGait
-    block: BasicBlock
+    type: GL_prediff
+
+    # ---- 主干基础结构 ----
     channels: [64, 128, 256, 512]
     layers: [1, 4, 4, 1]
     strides: [1, 2, 2, 1]
     maxpool: false
+    in_channel: 1
+
+    # ---- ★ 三个可配置开关 + 注意力超参 —— 全开 ----
+    use_temporal_diff: true              # 多路时序差分 (TemporalDifference)
+    use_diff_attention: true             # 差分注意力 (DifferentialAttention)
+    diff_ks: [1, 2, 3]                   # 三路差分
+    diff_attn_heads: 4
+    lambda_init: 0.5
+
   SeparateFCs:
     in_channels: 512
     out_channels: 256
@@ -56,6 +66,11 @@ model_cfg:
     in_channels: 256
     parts_num: 16
   bin_num: [16]
+
+  # ★ TDV 下一帧预测损失 (yaml 驱动 GL_prediff_Model) —— 全开
+  use_tdv: true             # ★ 开启 TDV 约束
+  tdv_weight: 0.1           # TDV 损失权重
+  tdv_use_motion_proj: true # 1x1x1 Conv 学 motion 编码
 
 optimizer_cfg:
   lr: 0.1
@@ -74,9 +89,9 @@ trainer_cfg:
   with_test: true
   log_iter: 500
   restore_ckpt_strict: true
-  restore_hint: 20000
+  restore_hint: 0
   save_iter: 20000
-  save_name: GLGait_casia_diff_fusion
+  save_name: GL_prediff_CASIA-B_tdv
   sync_BN: false
   total_iter: 80000
   find_unused_parameters: false

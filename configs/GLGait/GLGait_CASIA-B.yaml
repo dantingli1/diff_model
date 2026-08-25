@@ -2,7 +2,7 @@ data_cfg:
   dataset_name: CASIA-B
   dataset_root: /mnt/home/lidanting/gait/dataall/casia-b-pkl
   dataset_partition: /mnt/home/lidanting/projects/OpenGait/datasets/CASIA-B/CASIA-B.json
-  num_workers: 0
+  num_workers: 8
   remove_no_gallery: false
   test_dataset_name: CASIA-B
   cache: false
@@ -16,7 +16,7 @@ evaluator_cfg:
   eval_func: evaluate_indoor_dataset
   sampler:
     batch_shuffle: false
-    batch_size: 4
+    batch_size: 1
     sample_type: fixed_ordered
     frames_num_fixed: 30
     frames_skip_num: 0
@@ -56,6 +56,16 @@ model_cfg:
     in_channels: 256
     parts_num: 16
   bin_num: [16]
+
+  # ★ 差分融合配置 (yaml 驱动 Baseline_trans)
+  diff_ks: [1, 2, 3]        # 差分间隔，可写 [1]/[2]/[3]/[1,2]/[1,2,3]
+  diff_fuse: residual       # 'residual' 残差相加 / 'concat' 拼接后 1x1 Conv
+  use_attn: false           # 差分注意力开关 (此版消融：纯多路差分，不开注意力)
+
+  # ★ TDV 下一帧预测损失 (yaml 驱动 Baseline_trans)
+  use_tdv: false            # 关闭；开启后加入 z_{t+1} ≈ z_t + MotionEncoder(z_{t+1} - z_t) 约束
+  tdv_weight: 0.1           # TDV 损失在总 loss 中的权重
+  tdv_use_motion_proj: true # True=1x1x1 Conv 学 motion; False=直接用特征差
 
 optimizer_cfg:
   lr: 0.1

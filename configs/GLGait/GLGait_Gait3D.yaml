@@ -2,7 +2,7 @@ data_cfg:
   dataset_name: Gait3D
   dataset_root: /mnt/home/lidanting/gait/dataall/gait3d_sil_64_64_pkl
   dataset_partition: ./datasets/Gait3D/Gait3D.json
-  num_workers: 0
+  num_workers: 4
   remove_no_gallery: false # Remove probe if no gallery for it
   test_dataset_name: Gait3D
 
@@ -10,11 +10,11 @@ evaluator_cfg:
   enable_float16: true
   restore_ckpt_strict: true
   restore_hint: 120000
-  save_name: GLGaitBase_ori_gait3d_diff3
+  save_name: GLGaitBase_ori_gait3d
   eval_func: evaluate_Gait3D
   sampler:
     batch_shuffle: false
-    batch_size: 2
+    batch_size: 1
     sample_type: all_ordered # all indicates whole sequence used to test, while ordered means input sequence by its natural order; Other options:   fixed_unordered
     frames_all_limit: 720 # limit the number of sampled frames to prevent out of memory
   metric: euc # cos
@@ -71,6 +71,16 @@ model_cfg:
   bin_num:
     - 16
 
+  # ★ 差分融合配置 (yaml 驱动 Baseline_trans)
+  diff_ks: [1, 2, 3]        # 差分间隔
+  diff_fuse: concat         # 拼接模式: cat(C,C) → DiffAttn(2C) → Conv(2C→C) → 残差
+  use_attn: true            # 差分注意力开
+
+  # ★ TDV 下一帧预测损失 (yaml 驱动 Baseline_trans)
+  use_tdv: false            # 关闭；开启后加入 z_{t+1} ≈ z_t + MotionEncoder(z_{t+1} - z_t) 约束
+  tdv_weight: 0.1           # TDV 损失在总 loss 中的权重
+  tdv_use_motion_proj: true # True=1x1x1 Conv 学 motion; False=直接用特征差
+
 
 optimizer_cfg:
   lr: 0.1
@@ -93,9 +103,9 @@ trainer_cfg:
   log_iter: 100
   restore_ckpt_strict: true
   restore_hint: 0
-  save_iter: 10000
-  save_name: GLGaitBase_ori_gait3d_diff3
-  sync_BN: false  
+  save_iter: 40000
+  save_name: GLGaitBase_ori_gait3d
+  sync_BN: false  #单卡false, 多卡true
   total_iter: 120000
   sampler:
     batch_shuffle: true   

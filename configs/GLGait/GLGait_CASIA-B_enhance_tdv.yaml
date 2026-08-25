@@ -12,7 +12,7 @@ evaluator_cfg:
   enable_float16: true
   restore_ckpt_strict: true
   restore_hint: 0
-  save_name: GLGait_casia_diff_fusion
+  save_name: GLGait_CASIA-B_enhance_tdv
   eval_func: evaluate_indoor_dataset
   sampler:
     batch_shuffle: false
@@ -37,9 +37,10 @@ loss_cfg:
     type: CrossEntropyLoss
     log_prefix: softmax
     log_accuracy: true
+  # ★ TDV 损失算子会被 loss_aggregator 自动加到总 loss 上
 
 model_cfg:
-  model: GL_diff_fusion
+  model: Baseline_trans
   backbone_cfg:
     type: GLGait
     block: BasicBlock
@@ -56,6 +57,16 @@ model_cfg:
     in_channels: 256
     parts_num: 16
   bin_num: [16]
+
+  # ★ 差分融合配置 (yaml 驱动 Baseline_trans) —— 全开
+  diff_ks: [1, 2, 3]        # 三路差分
+  diff_fuse: residual       # 残差相加
+  use_attn: true            # 差分注意力开
+
+  # ★ TDV 下一帧预测损失 (yaml 驱动 Baseline_trans) —— 全开
+  use_tdv: true             # ★ 开启 TDV 约束
+  tdv_weight: 0.1           # TDV 损失权重 (典型 0.05~0.2)
+  tdv_use_motion_proj: true # 1x1x1 Conv 学 motion 编码
 
 optimizer_cfg:
   lr: 0.1
@@ -74,9 +85,9 @@ trainer_cfg:
   with_test: true
   log_iter: 500
   restore_ckpt_strict: true
-  restore_hint: 20000
+  restore_hint: 0
   save_iter: 20000
-  save_name: GLGait_casia_diff_fusion
+  save_name: GLGait_CASIA-B_enhance_tdv
   sync_BN: false
   total_iter: 80000
   find_unused_parameters: false
@@ -88,4 +99,11 @@ trainer_cfg:
     sample_type: fixed_ordered
     type: TripletSampler
   transform:
-    - type: BaseSilTransform
+    - type: Compose
+      trf_cfg:
+        - type: BaseSilTransform
+        - type: BaseParsingCuttingTransform
+        - type: RandomHorizontalFlip
+          p: 0.2
+        - type: RandomRotate
+          p: 0.2
